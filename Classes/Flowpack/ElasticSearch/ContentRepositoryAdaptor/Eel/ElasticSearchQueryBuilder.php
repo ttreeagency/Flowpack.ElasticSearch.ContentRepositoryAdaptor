@@ -94,6 +94,14 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	protected $elasticSearchAggregationsFromLastRequest;
 
 	/**
+	 * The ElasticSearch function_score configuration
+	 *
+	 * @see https://www.elastic.co/guide/en/elasticsearch/reference/1.6/query-dsl-function-score-query.html
+	 * @var array
+	 */
+	protected $functionScore = array();
+
+	/**
 	 * The ElasticSearch request, as it is being built up.
 	 * @var array
 	 */
@@ -402,6 +410,15 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	}
 
 	/**
+	 * @param array $functionScore
+	 * @return ElasticSearchQueryBuilder
+	 */
+	public function functionScore(array $functionScore) {
+		$this->functionScore = $functionScore;
+		return $this;
+	}
+
+	/**
 	 * LOW-LEVEL API
 	 */
 
@@ -484,7 +501,14 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	 * @return array
 	 */
 	public function getRequest() {
-		return $this->request;
+		$request = $this->request;
+		if ($this->functionScore !== array()) {
+			$query = $request['query'];
+			$request['query'] = array(
+				'function_score' => Arrays::arrayMergeRecursiveOverrule($this->functionScore, array('query' => $query))
+ 			);
+		}
+		return $request;
 	}
 
 	/**
@@ -544,14 +568,14 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	 */
 	public function fetch() {
 		$timeBefore = microtime(TRUE);
-		$response = $this->elasticSearchClient->getIndex()->request('GET', '/_search', array(), json_encode($this->request));
+		$response = $this->elasticSearchClient->getIndex()->request('GET', '/_search', array(), json_encode($this->getRequest()));
 		$timeAfterwards = microtime(TRUE);
 
 		$treatedContent = $response->getTreatedContent();
 		$hits = $treatedContent['hits'];
 
 		if ($this->logThisQuery === TRUE) {
-			$this->logger->log('Query Log (' . $this->logMessage . '): ' . json_encode($this->request) . ' -- execution time: ' . (($timeAfterwards - $timeBefore) * 1000) . ' ms -- Limit: ' . $this->limit . ' -- Number of results returned: ' . count($hits['hits']) . ' -- Total Results: ' . $hits['total'], LOG_DEBUG);
+			$this->logger->log('Query Log (' . $this->logMessage . '): ' . json_encode($this->getRequest()) . ' -- execution time: ' . (($timeAfterwards - $timeBefore) * 1000) . ' ms -- Limit: ' . $this->limit . ' -- Number of results returned: ' . count($hits['hits']) . ' -- Total Results: ' . $hits['total'], LOG_DEBUG);
 		}
 
 		$this->totalItems = $hits['total'];
@@ -628,7 +652,7 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	 */
 	public function count() {
 		$timeBefore = microtime(TRUE);
-		$request = $this->request;
+		$request = $this->getRequest();
 		foreach ($this->unsupportedFieldsInCountRequest as $field) {
 			if (isset($request[$field])) {
 				unset($request[$field]);
@@ -642,7 +666,7 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 		$count = $treatedContent['count'];
 
 		if ($this->logThisQuery === TRUE) {
-			$this->logger->log('Count Query Log (' . $this->logMessage . '): ' . json_encode($this->request) . ' -- execution time: ' . (($timeAfterwards - $timeBefore) * 1000) . ' ms -- Total Results: ' . $count, LOG_DEBUG);
+			$this->logger->log('Count Query Log (' . $this->logMessage . '): ' . json_encode($request) . ' -- execution time: ' . (($timeAfterwards - $timeBefore) * 1000) . ' ms -- Total Results: ' . $count, LOG_DEBUG);
 		}
 		return $count;
 	}
