@@ -109,12 +109,6 @@ class NodeIndexCommandController extends CommandController {
 	protected $logger;
 
 	/**
-	 * @Flow\Inject
-	 * @var \TYPO3\Flow\Configuration\ConfigurationManager
-	 */
-	protected $configurationManager;
-
-	/**
 	 * @var array
 	 */
 	protected $settings;
