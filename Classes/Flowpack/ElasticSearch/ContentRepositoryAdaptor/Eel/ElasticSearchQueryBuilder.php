@@ -675,21 +675,15 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
 	 * Match the searchword against the fulltext index
 	 *
 	 * @param string $searchWord
-	 * @param integer $fuzzyPrefixLength
 	 * @return QueryBuilderInterface
 	 * @api
 	 */
-	public function fulltext($searchWord, $fuzzyPrefixLength = NULL) {
-		$queryString = array(
+	public function fulltext($searchWord) {
+		$this->appendAtPath('query.filtered.query.bool.must', array(
 			'query_string' => array(
 				'query' => $searchWord
 			)
-		);
-		if ($fuzzyPrefixLength !== NULL) {
-			$queryString['query_string']['fuzzy_prefix_length'] = $fuzzyPrefixLength;
-		}
-
-		$this->appendAtPath('query.filtered.query.bool.must', $queryString);
+		));
 
 		// We automatically enable result highlighting when doing fulltext searches. It is up to the user to use this information or not use it.
 		return $this->highlight(150, 2);
