@@ -773,8 +773,9 @@ class ElasticSearchQueryBuilder implements QueryBuilderInterface, ProtectedConte
         $this->queryFilter('terms', array('__workspace' => array_unique(array('live', $contextNode->getContext()->getWorkspace()->getName()))));
 
         // match exact dimension values for each dimension, this works because the indexing flattens the node variants for all dimension preset combinations
-        foreach ($contextNode->getContext()->getDimensions() as $dimensionName => $dimensionValues) {
-            $this->queryFilter('terms', array('__dimensionCombinations.' . $dimensionName => $dimensionValues, 'execution' => 'and'));
+        $dimensionCombinations = $contextNode->getContext()->getDimensions();
+        if (is_array($dimensionCombinations)) {
+            $this->queryFilter('term', ['__dimensionCombinationHash' => md5(json_encode($dimensionCombinations))]);
         }
 
         $this->contextNode = $contextNode;
