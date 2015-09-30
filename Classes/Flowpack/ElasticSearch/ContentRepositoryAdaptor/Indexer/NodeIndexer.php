@@ -18,6 +18,7 @@ use Flowpack\ElasticSearch\Domain\Model\Document as ElasticSearchDocument;
 use Flowpack\ElasticSearch\Domain\Model\Index;
 use TYPO3\Flow\Annotations as Flow;
 use TYPO3\TYPO3CR\Domain\Model\NodeInterface;
+use TYPO3\TYPO3CR\Domain\Service\ContentDimensionCombinator;
 use TYPO3\TYPO3CR\Domain\Service\NodeTypeManager;
 use TYPO3\TYPO3CR\Search\Indexer\AbstractNodeIndexer;
 
@@ -66,6 +67,18 @@ class NodeIndexer extends AbstractNodeIndexer {
 	 * @var \Flowpack\ElasticSearch\ContentRepositoryAdaptor\LoggerInterface
 	 */
 	protected $logger;
+
+	/**
+	 * @Flow\Inject
+	 * @var ContentDimensionCombinator
+	 */
+	protected $contentDimensionCombinator;
+
+	/**
+	 * @Flow\Inject
+	 * @var \TYPO3\TYPO3CR\Domain\Service\ContextFactory
+	 */
+	protected $contextFactory;
 
 	/**
 	 * The current ElasticSearch bulk request, in the format required by http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
@@ -118,6 +131,25 @@ class NodeIndexer extends AbstractNodeIndexer {
 	 * @throws \TYPO3\TYPO3CR\Search\Exception\IndexingException
 	 */
 	public function indexNode(NodeInterface $node, $targetWorkspaceName = NULL) {
+		$workspaceName = $targetWorkspaceName ?: $node->getContext()->getWorkspace()->getName();
+		foreach ($this->contentDimensionCombinator->getAllAllowedCombinations() as $dimensions) {
+			$context = $this->contextFactory->create(array('workspaceName' => $workspaceName, 'dimensions' => $dimensions));
+			$nodeVariant = $context->getNodeByIdentifier($node->getIdentifier());
+			if ($nodeVariant !== NULL) {
+				$this->addNodeToBulkRequest($nodeVariant, $targetWorkspaceName);
+			}
+		}
+	}
+
+	/**
+	 * index the given node, and add it to the current bulk request.
+	 *
+	 * @param NodeInterface $node
+	 * @param string $targetWorkspaceName In case this is triggered during publishing, a workspace name will be passed in
+	 * @return void
+	 * @throws \TYPO3\TYPO3CR\Search\Exception\IndexingException
+	 */
+	protected function addNodeToBulkRequest(NodeInterface $node, $targetWorkspaceName = NULL) {
 		$contextPath = $node->getContextPath();
 
 		if ($this->settings['indexAllWorkspaces'] === FALSE) {
