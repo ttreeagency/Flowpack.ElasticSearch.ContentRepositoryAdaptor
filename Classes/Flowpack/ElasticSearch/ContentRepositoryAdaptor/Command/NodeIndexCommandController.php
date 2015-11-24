@@ -165,14 +165,19 @@ class NodeIndexCommandController extends CommandController
      * @param integer $limit Amount of nodes to index at maximum
      * @param boolean $update if TRUE, do not throw away the index at the start. Should *only be used for development*.
      * @param string $workspace name of the workspace which should be indexed
+     * @param string $postfix Index postfix, index with the same postifix will be deleted if exist
      * @return void
      */
-    public function buildCommand($limit = null, $update = false, $workspace = null)
+    public function buildCommand($limit = null, $update = false, $workspace = null, $postfix = null)
     {
         if ($update === true) {
             $this->logger->log('!!! Update Mode (Development) active!', LOG_INFO);
         } else {
-            $this->nodeIndexer->setIndexNamePostfix(time());
+            $this->nodeIndexer->setIndexNamePostfix($postfix ?: time());
+            if ($this->nodeIndexer->getIndex()->exists() === true) {
+                $this->logger->log(sprintf('Deleted index with the same postfix (%s)!', $postfix), LOG_WARNING);
+                $this->nodeIndexer->getIndex()->delete();
+            }
             $this->nodeIndexer->getIndex()->create();
             $this->logger->log('Created index ' . $this->nodeIndexer->getIndexName(), LOG_INFO);
 
