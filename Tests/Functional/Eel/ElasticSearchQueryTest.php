@@ -172,6 +172,8 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
     {
         $descendingResult = $this->queryBuilder->query($this->context->getRootNode())->sortDesc('title')->execute();
         $node = $descendingResult->getFirst();
+
+        $this->assertInstanceOf(\TYPO3\TYPO3CR\Domain\Model\Node::class, $node);
         $this->assertEquals('egg', $node->getProperty('title'), 'Asserting a desc sort order by property title');
     }
 
@@ -182,6 +184,8 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
     {
         $ascendingResult = $this->queryBuilder->query($this->context->getRootNode())->sortAsc('title')->execute();
         $node = $ascendingResult->getFirst();
+
+        $this->assertInstanceOf(\TYPO3\TYPO3CR\Domain\Model\Node::class, $node);
         $this->assertEquals('chicken', $node->getProperty('title'), 'Asserting a asc sort order by property title');
     }
 
