@@ -191,6 +191,7 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
     }
 
     /**
+     * @test
      */
     public function termSuggestion()
     {
@@ -208,7 +209,7 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
 
         $expectedChickenBucket = [
             'text' => 'chicken',
-            'freq' => 2,
+            'freq' => 14,
             'score' => 0.8333333
         ];
 
@@ -225,6 +226,13 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
             ->nodeType('TYPO3.Neos.NodeTypes:Page')
             ->sortDesc('title')
             ->execute();
+
+        /** @var \TYPO3\Flow\Persistence\QueryResultInterface $result $node */
+
+        $this->assertInstanceOf(\TYPO3\Flow\Persistence\QueryResultInterface::class, $result);
+        $this->assertCount(3, $result, 'The result should have 3 items');
+        $this->assertEquals(3, $result->count(), 'Count should be 3');
+
         $node = $result->getFirst();
 
         $this->assertInstanceOf(NodeInterface::class, $node);
@@ -277,9 +285,6 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
      */
     protected function createNodesForNodeSearchTest()
     {
-        if (self::$indexInitialized === true) {
-            return;
-        }
         $newNode1 = $this->siteNode->createNode('test-node-1', $this->nodeTypeManager->getNodeType('TYPO3.Neos.NodeTypes:Page'));
         $newNode1->setProperty('title', 'chicken');
 
@@ -299,6 +304,11 @@ class ElasticSearchQueryTest extends \TYPO3\Flow\Tests\FunctionalTestCase
         $this->persistenceManager->persistAll();
 
         sleep(2);
+
+        if (self::$indexInitialized === true) {
+            return;
+        }
+
         $this->nodeIndexCommandController->buildCommand(null, false, null, 'functionaltest');
         self::$indexInitialized = true;
     }
