@@ -160,6 +160,7 @@ class NodeIndexer extends AbstractNodeIndexer
             }
 
             $contextPathHash = sha1($contextPath);
+
             $nodeType = $node->getNodeType();
 
             $mappingType = $this->getIndex()->findType(NodeTypeMappingBuilder::convertNodeTypeNameToMappingName($nodeType));
@@ -273,6 +274,20 @@ class NodeIndexer extends AbstractNodeIndexer
             $indexableNode = $query->get(0);
             if ($indexableNode instanceof NodeInterface) {
                 $indexer($indexableNode, $targetWorkspaceName);
+                if ($indexableNode->getNodeType()->isOfType('TYPO3.Neos:Document')) {
+                    continue;
+                }
+                $flowQuery = new FlowQuery([$node]);
+                $indexableDocumentNode = $flowQuery->closest('[instanceof TYPO3.Neos:Document]')->get(0);
+                if ($this->isFulltextEnabled($indexableDocumentNode)) {
+                    $query = new FlowQuery([$indexableDocumentNode]);
+                    $query->pushOperation('context', [[
+                        'dimensions' => $dimensions,
+                        'targetDimensions' => $targetDimensions
+                    ]]);
+                    $indexableDocumentNode = $query->get(0);
+                    $indexer($indexableDocumentNode, $targetWorkspaceName);
+                }
             }
         }
     }
